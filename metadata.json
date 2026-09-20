@@ -1,0 +1,6 @@
+{
+  "name": "EduScore TZ - Academic Analytics Portal",
+  "description": "Tanzanian National Curriculum & NECTA Academic Analytics, Student Matrix, Teacher Grading, and Parent Portal",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

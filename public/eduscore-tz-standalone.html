@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+  <meta name="theme-color" content="#020617">
+  <meta name="description" content="EduScore TZ - Tanzanian National Curriculum & NECTA Academic Analytics Portal Standalone Version">
+  <title>EduScore TZ - Comprehensive Academic Analytics (Standalone Edition)</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #ffffff;
+      --primary: #f59e0b;
+      --accent: #10b981;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f8fafc; color: #1e293b; line-height: 1.5; font-size: 14px; }
+    
+    /* Top Banner */
+    .top-banner { background: #020617; color: #ffffff; padding: 8px 16px; font-size: 11px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b; flex-wrap: wrap; gap: 8px; }
+    .pulse-dot { width: 8px; height: 8px; background: #10b981; border-radius: 50%; display: inline-block; margin-right: 6px; box-shadow: 0 0 8px #10b981; }
+
+    /* Layout */
+    .app-layout { display: flex; min-height: calc(100vh - 35px); }
+    .sidebar { width: 260px; background: #0f172a; color: #f8fafc; flex-shrink: 0; display: flex; flex-direction: column; justify-content: space-between; }
+    .brand { padding: 18px; border-bottom: 1px solid #1e293b; background: #020617; display: flex; align-items: center; gap: 10px; }
+    .brand-icon { width: 36px; height: 36px; background: #f59e0b; color: #020617; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 18px; }
+    .brand-text h1 { font-size: 15px; color: #fbbf24; font-weight: 800; letter-spacing: 0.5px; }
+    .brand-text p { font-size: 10px; color: #94a3b8; }
+    
+    .nav-list { padding: 12px 8px; display: flex; flex-direction: column; gap: 4px; }
+    .nav-label { font-size: 10px; font-weight: 800; text-transform: uppercase; color: #64748b; padding: 8px 12px 4px; letter-spacing: 0.5px; }
+    .nav-btn { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 10px 12px; background: transparent; border: none; color: #cbd5e1; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+    .nav-btn:hover { background: #1e293b; color: #ffffff; }
+    .nav-btn.active { background: #1e293b; color: #ffffff; border-left: 4px solid #f59e0b; }
+    
+    .main-content { flex: 1; min-width: 0; overflow-y: auto; padding: 24px; max-width: 1200px; margin: 0 auto; width: 100%; }
+    
+    /* Header */
+    .view-header { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px 24px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+    .view-header h2 { font-size: 20px; font-weight: 800; color: #0f172a; }
+    .view-header p { font-size: 12px; color: #64748b; margin-top: 2px; }
+
+    /* Cards & Grids */
+    .grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .stat-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; display: flex; justify-content: space-between; align-items: center; }
+    .stat-card .val { font-size: 24px; font-weight: 900; color: #0f172a; margin-top: 4px; }
+    .stat-card .lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #64748b; }
+    .stat-card .sub { font-size: 11px; font-weight: 700; color: #10b981; margin-top: 4px; }
+
+    .card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 24px; }
+    .card-title { font-size: 16px; font-weight: 800; color: #0f172a; margin-bottom: 4px; }
+    .card-sub { font-size: 12px; color: #64748b; margin-bottom: 16px; }
+
+    /* Buttons */
+    .btn { padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 700; border: none; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-primary { background: #f59e0b; color: #0f172a; }
+    .btn-primary:hover { background: #d97706; }
+    .btn-dark { background: #0f172a; color: #ffffff; }
+    .btn-dark:hover { background: #1e293b; }
+    .btn-gray { background: #f1f5f9; color: #334155; }
+    .btn-gray:hover { background: #e2e8f0; }
+
+    /* Tables */
+    .table-wrap { overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 10px; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; text-align: left; }
+    th { background: #f8fafc; padding: 12px 14px; font-weight: 800; color: #475569; border-bottom: 1px solid #e2e8f0; font-size: 11px; text-transform: uppercase; }
+    td { padding: 12px 14px; border-bottom: 1px solid #f1f5f9; color: #1e293b; }
+    tr:hover td { background: #f8fafc; }
+
+    /* Pills & Badges */
+    .pill { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 10px; font-weight: 800; }
+    .pill-green { background: #dcfce7; color: #15803d; }
+    .pill-blue { background: #dbeafe; color: #1d4ed8; }
+    .pill-amber { background: #fef3c7; color: #b45309; }
+    .pill-red { background: #fee2e2; color: #b91c1c; }
+
+    /* Progress bar */
+    .progress-bar { background: #e2e8f0; border-radius: 99px; height: 8px; overflow: hidden; width: 100%; }
+    .progress-fill { height: 100%; border-radius: 99px; background: #10b981; }
+
+    /* Mobile Hamburger & Drawer */
+    .mobile-bar { display: none; background: #0f172a; color: #ffffff; padding: 12px 16px; justify-content: space-between; align-items: center; }
+    .hamburger { background: none; border: none; color: #ffffff; font-size: 22px; cursor: pointer; }
+
+    @media (max-width: 860px) {
+      .app-layout { flex-direction: column; }
+      .mobile-bar { display: flex; }
+      .sidebar { display: none; width: 100%; }
+      .sidebar.open { display: flex; }
+      .main-content { padding: 16px; }
+      .view-header { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top System Status -->
+  <div class="top-banner">
+    <div>
+      <span class="pulse-dot"></span>
+      <strong>EduScore TZ Core v1.0</strong> | Tanzanian National Curriculum Engine (NECTA CSEE/ACSEE)
+    </div>
+    <div>Academic Year: 2026 | Standalone HTML Edition (Fully Responsive)</div>
+  </div>
+
+  <!-- Mobile Top Bar -->
+  <div class="mobile-bar">
+    <div style="font-weight: 800; color: #f59e0b;">&#127891; EDUSCORE TZ</div>
+    <button class="hamburger" onclick="toggleSidebar()">&#9776;</button>
+  </div>
+
+  <div class="app-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div>
+        <div class="brand">
+          <div class="brand-icon">&#127891;</div>
+          <div class="brand-text">
+            <h1>EDUSCORE TZ</h1>
+            <p>National Analytical Portal</p>
+          </div>
+        </div>
+
+        <nav class="nav-list">
+          <div class="nav-label">Main Management</div>
+          <button class="nav-btn active" onclick="switchView('dashboard')">&#128202; National Dashboard</button>
+          <button class="nav-btn" onclick="switchView('curriculum')">&#128214; Curriculum Coverage</button>
+          <button class="nav-btn" onclick="switchView('students')">&#128101; Student Tracker</button>
+          <button class="nav-btn" onclick="switchView('teacher')">&#9998; Teacher Marks Desk</button>
+          <button class="nav-btn" onclick="switchView('recommendations')">&#10024; AI Action Plan</button>
+          
+          <div class="nav-label">Stakeholders</div>
+          <button class="nav-btn" onclick="switchView('parentPortal')">&#128241; Parent Real-Time Desk</button>
+          <button class="nav-btn" onclick="switchView('district')">&#127979; District Benchmarking</button>
+          <button class="nav-btn" onclick="switchView('reports')">&#128196; Reports & Transcripts</button>
+          <button class="nav-btn" onclick="switchView('data')">&#128190; Data Centre (CSV)</button>
+        </nav>
+      </div>
+
+      <div style="padding: 16px; border-top: 1px solid #1e293b; font-size: 11px; color: #94a3b8;">
+        <strong style="color: #ffffff; display: block;">Mwalimu J. Kimbisa</strong>
+        Head of School / Administrator
+      </div>
+    </aside>
+
+    <!-- Main Workspace -->
+    <main class="main-content">
+      
+      <!-- 1. DASHBOARD VIEW -->
+      <div id="view-dashboard" class="tab-panel">
+        <div class="view-header">
+          <div>
+            <h2>National & School Board Analytics</h2>
+            <p>Cross-examining school metrics against NECTA regional benchmarks and past performance indicators.</p>
+          </div>
+          <div>
+            <button class="btn btn-primary" onclick="window.print()">&#128438; Print Dashboard</button>
+          </div>
+        </div>
+
+        <div class="grid-4">
+          <div class="stat-card">
+            <div>
+              <div class="lbl">Total Enrollment</div>
+              <div class="val" id="dash-enrollment">1,248</div>
+              <div class="sub">+4.2% vs 2025</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div>
+              <div class="lbl">School GPA</div>
+              <div class="val">3.62 <span style="font-size: 14px; color: #94a3b8;">/ 5.0</span></div>
+              <div class="sub">+0.18 NECTA Shift</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div>
+              <div class="lbl">Syllabus Completion</div>
+              <div class="val">78.4%</div>
+              <div class="progress-bar" style="margin-top: 6px;"><div class="progress-fill" style="width: 78.4%;"></div></div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div>
+              <div class="lbl">Projected Division I</div>
+              <div class="val">34.2%</div>
+              <div class="sub" style="color: #3b82f6;">Target: 40.0% NECTA</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- O & A Level Performance Grid -->
+        <div class="card">
+          <div class="card-title">O-Level & A-Level Strategic Performance Matrix</div>
+          <div class="card-sub">Live operational metrics broken down by form levels, stream divisions, and structural completion values.</div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Form Level</th>
+                  <th>Registered</th>
+                  <th>Syllabus Completion</th>
+                  <th>Term Average</th>
+                  <th>National Percentile</th>
+                  <th>Risk Level</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Form I</strong> (O-Level Base)</td>
+                  <td>280 Students</td>
+                  <td>92%</td>
+                  <td>68.4% (Grade B)</td>
+                  <td>Top 15% Nationally</td>
+                  <td><span class="pill pill-green">Low Risk</span></td>
+                </tr>
+                <tr>
+                  <td><strong>Form IV</strong> (CSEE Candidate Year)</td>
+                  <td>215 Students</td>
+                  <td>84%</td>
+                  <td>58.1% (Grade C)</td>
+                  <td>Top 22% Nationally</td>
+                  <td><span class="pill pill-amber">Monitoring</span></td>
+                </tr>
+                <tr>
+                  <td><strong>Form VI</strong> (ACSEE Candidate Year)</td>
+                  <td>142 Students</td>
+                  <td>61%</td>
+                  <td>74.9% (Grade B+)</td>
+                  <td>Top 8% Nationally</td>
+                  <td><span class="pill pill-red">Critical Pace Alert</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. CURRICULUM VIEW -->
+      <div id="view-curriculum" class="tab-panel" style="display: none;">
+        <div class="view-header">
+          <div>
+            <h2>National Scheme of Work Coverage Ledger</h2>
+            <p>Track structural completion rates based on unified Tanzanian Institute of Education (TIE) standards.</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Subject Pace Indices (Form 1 - 4 Syllabus)</div>
+          <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 16px;">
+            <div>
+              <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 12px; margin-bottom: 4px;">
+                <span>Basic Mathematics (Mr. Lazaro Nyalandu)</span>
+                <span style="color: #b45309;">64.0% (Running 14 days behind schedule)</span>
+              </div>
+              <div class="progress-bar"><div class="progress-fill" style="width: 64%; background: #f59e0b;"></div></div>
+            </div>
+            <div>
+              <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 12px; margin-bottom: 4px;">
+                <span>Biology (Madam Upendo Massawe)</span>
+                <span style="color: #15803d;">88.5% (On schedule - 8 Practical Labs)</span>
+              </div>
+              <div class="progress-bar"><div class="progress-fill" style="width: 88.5%;"></div></div>
+            </div>
+            <div>
+              <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 12px; margin-bottom: 4px;">
+                <span>English Language (Madam S. Mtei)</span>
+                <span style="color: #15803d;">85.0% (On schedule)</span>
+              </div>
+              <div class="progress-bar"><div class="progress-fill" style="width: 85%;"></div></div>
+            </div>
+            <div>
+              <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 12px; margin-bottom: 4px;">
+                <span>Kiswahili (Mr. R. Joseph)</span>
+                <span style="color: #15803d;">90.0% (Completed Ahead of Pace)</span>
+              </div>
+              <div class="progress-bar"><div class="progress-fill" style="width: 90%;"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. STUDENT TRACKER VIEW -->
+      <div id="view-students" class="tab-panel" style="display: none;">
+        <div class="view-header">
+          <div>
+            <h2>Student Tracker Matrix</h2>
+            <p>Granular tracking models mapping continuous assessment scores, parent details and NECTA projections.</p>
+          </div>
+          <div>
+            <input type="text" id="studentSearch" oninput="renderStudentsTable()" placeholder="Search student name or ID..." style="padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 12px;">
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="table-wrap">
+            <table id="studentsTable">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Student Name</th>
+                  <th>Form</th>
+                  <th>Math</th>
+                  <th>English</th>
+                  <th>Kiswahili</th>
+                  <th>Science</th>
+                  <th>Average</th>
+                  <th>Division</th>
+                  <th>Parent</th>
+                  <th>Phone</th>
+                </tr>
+              </thead>
+              <tbody id="studentsBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. TEACHER WORKSPACE -->
+      <div id="view-teacher" class="tab-panel" style="display: none;">
+        <div class="view-header">
+          <div>
+            <h2>Teacher Assessment Workspace</h2>
+            <p>Log continuous assessment marks. Student averages and NECTA divisions recalculate immediately.</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Enter Student Subject Mark</div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 14px;">
+            <div>
+              <label style="font-size: 11px; font-weight: 700; display: block; margin-bottom: 4px;">Teacher</label>
+              <select id="teacherName" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px;">
+                <option>M. Mwakalinga</option>
+                <option>Mr. Lazaro Nyalandu</option>
+                <option>Madam S. Mtei</option>
+                <option>Mr. R. Joseph</option>
+                <option>Mr. P. Mushi</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size: 11px; font-weight: 700; display: block; margin-bottom: 4px;">Subject</label>
+              <select id="teacherSubject" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px;">
+                <option value="mathematics">Basic Mathematics</option>
+                <option value="english">English Language</option>
+                <option value="kiswahili">Kiswahili</option>
+                <option value="science">Biology / Science</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size: 11px; font-weight: 700; display: block; margin-bottom: 4px;">Student</label>
+              <select id="teacherStudent" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px;"></select>
+            </div>
+            <div>
+              <label style="font-size: 11px; font-weight: 700; display: block; margin-bottom: 4px;">Score (%)</label>
+              <input type="number" id="teacherScore" min="0" max="100" value="75" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px;">
+            </div>
+          </div>
+          <div style="margin-top: 14px;">
+            <button class="btn btn-primary" onclick="saveTeacherMark()">&#128190; Save Assessment</button>
+            <span id="teacherFeedback" style="margin-left: 12px; font-size: 12px; color: #15803d; font-weight: 700;"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. AI INSIGHT -->
+      <div id="view-recommendations" class="tab-panel" style="display: none;">
+        <div class="view-header">
+          <div>
+            <h2>AI Strategic Recommendations Engine</h2>
+            <p>Automated advisory notices targeted at resolving systemic NECTA bottleneck parameters.</p>
+          </div>
+        </div>
+
+        <div class="card" style="border-left: 5px solid #a855f7;">
+          <div style="font-size: 11px; font-weight: 800; color: #7e22ce; text-transform: uppercase;">Institutional Directive</div>
+          <h3 style="font-size: 16px; font-weight: 800; margin: 4px 0;">Implement Form Four Diagnostic Testing Matrix</h3>
+          <p style="font-size: 13px; color: #334155; margin-top: 4px;">
+            Analyzing past national NECTA trends indicates schools that introduced weekly multi-subject mock clusters in July experienced a <strong>14.2% upward variance</strong> in Division II tier achievements.
+          </p>
+        </div>
+
+        <div class="card" style="border-left: 5px solid #f59e0b;">
+          <div style="font-size: 11px; font-weight: 800; color: #b45309; text-transform: uppercase;">Special Needs Inclusion</div>
+          <h3 style="font-size: 16px; font-weight: 800; margin: 4px 0;">Differentiated Learning Watchlist</h3>
+          <p style="font-size: 13px; color: #334155; margin-top: 4px;">
+            Tracking students requiring accommodations: Baraka John (Form II, Large Text 24pt), Mariam Ally (Form IV, Dyscalculia 1-on-1 numeracy allocation).
+          </p>
+        </div>
+      </div>
+
+      <!-- 6. PARENT DESK -->
+      <div id="view-parentPortal" class="tab-panel" style="display: none;">
+        <div class="view-header">
+          <div>
+            <h2>Parent Real-Time Desk (Guardian View)</h2>
+            <p>Live terminal viewpoints transmitting continuous assessment scores directly to legal guardians.</p>
+          </div>
+        </div>
+
+        <div class="card" style="background: #0f172a; color: #ffffff;">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 12px; margin-bottom: 16px;">
+            <div>
+              <span style="font-size: 11px; color: #f59e0b; font-weight: 800; text-transform: uppercase;">Active Guardian Link</span>
+              <h3 style="font-size: 18px; font-weight: 800;">Moses Mwangi (Baba Amani)</h3>
+              <p style="font-size: 12px; color: #94a3b8;">Linked Ward: Amani M. Mwangi (Form IV Alpha)</p>
+            </div>
+            <button class="btn btn-primary" onclick="alert('Simulated SMS sent to Moses Mwangi (+255715443201): Amani term average is 74.2% (Division I). Attendance: 98%.')">&#128241; Trigger SMS Alert</button>
+          </div>
+          <div class="grid-4" style="margin-bottom: 0;">
+            <div style="background: #1e293b; padding: 12px; border-radius: 8px;">
+              <div style="font-size: 11px; color: #94a3b8;">Attendance</div>
+              <div style="font-size: 20px; font-weight: 800; color: #10b981;">98.2%</div>
+            </div>
+            <div style="background: #1e293b; padding: 12px; border-radius: 8px;">
+              <div style="font-size: 11px; color: #94a3b8;">Assignments</div>
+              <div style="font-size: 20px; font-weight: 800; color: #38bdf8;">24 / 24</div>
+            </div>
+            <div style="background: #1e293b; padding: 12px; border-radius: 8px;">
+              <div style="font-size: 11px; color: #94a3b8;">Mock Rank</div>
+              <div style="font-size: 20px; font-weight: 800; color: #fbbf24;">14th / 280</div>
+            </div>
+            <div style="background: #1e293b; padding: 12px; border-radius: 8px;">
+              <div style="font-size: 11px; color: #94a3b8;">Fees Status</div>
+              <div style="font-size: 20px; font-weight: 800; color: #4ade80;">Cleared</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 7. DISTRICT BENCHMARKING -->
+      <div id="view-district" class="tab-panel" style="display: none;">
+        <div class="view-header">
+          <div>
+            <h2>Inter-School & District Academic Benchmarking</h2>
+            <p>Comparative academic performance indices across Arusha, Kinondoni and Dodoma Urban.</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Rank</th>
+                  <th>School</th>
+                  <th>Region</th>
+                  <th>District</th>
+                  <th>Students</th>
+                  <th>Average</th>
+                  <th>Pass Rate</th>
+                  <th>Risk Level</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>1</strong></td>
+                  <td><strong>Ilboru Secondary School</strong></td>
+                  <td>Arusha</td>
+                  <td>Arusha Urban</td>
+                  <td>642</td>
+                  <td>74.9%</td>
+                  <td>89%</td>
+                  <td><span class="pill pill-green">Low Risk</span></td>
+                </tr>
+                <tr style="background: #fefce8;">
+                  <td><strong>2</strong></td>
+                  <td><strong>Jitegemee Secondary School</strong> (Our School)</td>
+                  <td>Dar es Salaam</td>
+                  <td>Kinondoni</td>
+                  <td>606</td>
+                  <td>68.4%</td>
+                  <td>78%</td>
+                  <td><span class="pill pill-amber">Monitoring</span></td>
+                </tr>
+                <tr>
+                  <td><strong>3</strong></td>
+                  <td><strong>Mzumbe Secondary School</strong></td>
+                  <td>Morogoro</td>
+                  <td>Mzumbeni</td>
+                  <td>580</td>
+                  <td>67.1%</td>
+                  <td>76%</td>
+                  <td><span class="pill pill-amber">Monitoring</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 8. REPORTS -->
+      <div id="view-reports" class="tab-panel" style="display: none;">
+        <div class="view-header">
+          <div>
+            <h2>Reports & Official Transcripts</h2>
+            <p>Formatted printable transcripts aligned with NECTA grading guidelines.</p>
+          </div>
+          <div>
+            <button class="btn btn-primary" onclick="window.print()">&#128438; Print Transcript</button>
+          </div>
+        </div>
+
+        <div class="card" style="border: 2px solid #0f172a; padding: 24px;">
+          <div style="text-align: center; border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 16px;">
+            <div style="font-size: 11px; font-weight: 800; letter-spacing: 1px;">THE UNITED REPUBLIC OF TANZANIA</div>
+            <h2 style="font-size: 20px; font-weight: 900; margin-top: 4px;">JITEGEMEE SECONDARY SCHOOL</h2>
+            <div style="font-size: 12px; color: #475569;">ACADEMIC TRANSCRIPT & CONTINUOUS ASSESSMENT REPORT — TERM 1, 2026</div>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 16px; background: #f8fafc; padding: 10px; border-radius: 8px;">
+            <div><strong>Candidate:</strong> Amani M. Mwangi</div>
+            <div><strong>Registration ID:</strong> TZ-2023-CSEE-0941</div>
+            <div><strong>Form:</strong> Form IV Alpha</div>
+            <div><strong>Standing:</strong> Division I (14 points)</div>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Subject</th>
+                  <th>Score (%)</th>
+                  <th>NECTA Grade</th>
+                  <th>Points</th>
+                  <th>Remarks</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Basic Mathematics</td>
+                  <td>61%</td>
+                  <td><strong style="color: #b45309;">C</strong></td>
+                  <td>3</td>
+                  <td>Good (Math remedial advised)</td>
+                </tr>
+                <tr>
+                  <td>English Language</td>
+                  <td>88%</td>
+                  <td><strong style="color: #15803d;">A</strong></td>
+                  <td>1</td>
+                  <td>Excellent Performance</td>
+                </tr>
+                <tr>
+                  <td>Kiswahili</td>
+                  <td>79%</td>
+                  <td><strong style="color: #15803d;">A</strong></td>
+                  <td>1</td>
+                  <td>Excellent Performance</td>
+                </tr>
+                <tr>
+                  <td>Biology / Science</td>
+                  <td>84%</td>
+                  <td><strong style="color: #15803d;">A</strong></td>
+                  <td>1</td>
+                  <td>Very Strong Competence</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 9. DATA CENTRE -->
+      <div id="view-data" class="tab-panel" style="display: none;">
+        <div class="view-header">
+          <div>
+            <h2>Data Centre & CSV Export</h2>
+            <p>Export all live candidate and examination matrices to CSV.</p>
+          </div>
+          <div>
+            <button class="btn btn-primary" onclick="exportCsv()">&#128190; Export Students CSV</button>
+            <button class="btn btn-gray" onclick="restoreDemo()">&#8634; Restore Demo Data</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div id="dataStatus" style="font-size: 12px; font-weight: 700; color: #15803d; margin-bottom: 12px;">Data Engine Online</div>
+          <div style="font-size: 12px; color: #475569;">
+            You can export records to an Excel-compatible CSV anytime. The standalone edition operates entirely in this browser offline.
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- SCRIPT ENGINE -->
+  <script>
+    let STUDENTS = [
+      {
+        id: "TZ-2023-CSEE-0941",
+        name: "Amani M. Mwangi",
+        form: "Form IV",
+        stream: "Alpha",
+        school: "Jitegemee Secondary School",
+        parent: "Moses Mwangi",
+        phone: "+255715443201",
+        mathematics: 61,
+        english: 88,
+        kiswahili: 79,
+        science: 84,
+        average: 74,
+        nectaDivision: "Division I"
+      },
+      {
+        id: "TZ-2023-CSEE-1082",
+        name: "Zuwena K. Khalfan",
+        form: "Form IV",
+        stream: "Beta",
+        school: "Jitegemee Secondary School",
+        parent: "Khalfan J. Said",
+        phone: "+255784992134",
+        mathematics: 28,
+        english: 68,
+        kiswahili: 74,
+        science: 46,
+        average: 54,
+        nectaDivision: "Division III"
+      },
+      {
+        id: "TZ-2024-CSEE-1194",
+        name: "Asha H. Juma",
+        form: "Form III",
+        stream: "Alpha",
+        school: "Jitegemee Secondary School",
+        parent: "Habiba M. Juma",
+        phone: "+255762881902",
+        mathematics: 84,
+        english: 91,
+        kiswahili: 86,
+        science: 92,
+        average: 88,
+        nectaDivision: "Division I"
+      },
+      {
+        id: "TZ-2025-FTNA-2041",
+        name: "Baraka E. Mollel",
+        form: "Form II",
+        stream: "Omega",
+        school: "Jitegemee Secondary School",
+        parent: "Eliamani Mollel",
+        phone: "+255655320984",
+        mathematics: 42,
+        english: 55,
+        kiswahili: 64,
+        science: 52,
+        average: 53,
+        nectaDivision: "Division III"
+      },
+      {
+        id: "TZ-2026-FTNA-3105",
+        name: "Neema S. Said",
+        form: "Form I",
+        stream: "Alpha",
+        school: "Jitegemee Secondary School",
+        parent: "Salum K. Said",
+        phone: "+255773120495",
+        mathematics: 76,
+        english: 82,
+        kiswahili: 80,
+        science: 78,
+        average: 79,
+        nectaDivision: "Division I"
+      },
+      {
+        id: "TZ-2022-ACSEE-0421",
+        name: "Joseph T. Mushi",
+        form: "Form VI",
+        stream: "PCM",
+        school: "Jitegemee Secondary School",
+        parent: "Thomas Mushi",
+        phone: "+255754809211",
+        mathematics: 78,
+        english: 84,
+        kiswahili: 70,
+        science: 86,
+        average: 80,
+        nectaDivision: "Division I"
+      }
+    ];
+
+    function toggleSidebar() {
+      const s = document.getElementById('sidebar');
+      s.classList.toggle('open');
+    }
+
+    function switchView(tabId) {
+      document.querySelectorAll('.tab-panel').forEach(p => p.style.display = 'none');
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      
+      const target = document.getElementById('view-' + tabId);
+      if (target) target.style.display = 'block';
+
+      if (window.event && window.event.currentTarget) {
+        window.event.currentTarget.classList.add('active');
+      }
+      
+      // Close sidebar on mobile
+      if (window.innerWidth <= 860) {
+        document.getElementById('sidebar').classList.remove('open');
+      }
+    }
+
+    function renderStudentsTable() {
+      const q = (document.getElementById('studentSearch')?.value || '').toLowerCase();
+      const tbody = document.getElementById('studentsBody');
+      if (!tbody) return;
+
+      const filtered = STUDENTS.filter(s => 
+        s.name.toLowerCase().includes(q) || 
+        s.id.toLowerCase().includes(q) ||
+        s.parent.toLowerCase().includes(q)
+      );
+
+      tbody.innerHTML = filtered.map(s => `
+        <tr>
+          <td><strong style="color: #475569;">${s.id}</strong></td>
+          <td><strong>${s.name}</strong></td>
+          <td>${s.form} ${s.stream}</td>
+          <td>${s.mathematics}%</td>
+          <td>${s.english}%</td>
+          <td>${s.kiswahili}%</td>
+          <td>${s.science}%</td>
+          <td><strong>${s.average}%</strong></td>
+          <td><span class="pill pill-green">${s.nectaDivision}</span></td>
+          <td>${s.parent}</td>
+          <td>${s.phone}</td>
+        </tr>
+      `).join('');
+
+      // Populate teacher dropdown
+      const sel = document.getElementById('teacherStudent');
+      if (sel) {
+        sel.innerHTML = STUDENTS.map(s => `<option value="${s.id}">${s.name} (${s.form})</option>`).join('');
+      }
+    }
+
+    function saveTeacherMark() {
+      const stuId = document.getElementById('teacherStudent').value;
+      const subj = document.getElementById('teacherSubject').value;
+      const score = +document.getElementById('teacherScore').value;
+      
+      const stu = STUDENTS.find(s => s.id === stuId);
+      if (stu) {
+        stu[subj] = score;
+        stu.average = Math.round((stu.mathematics + stu.english + stu.kiswahili + stu.science) / 4);
+        renderStudentsTable();
+        document.getElementById('teacherFeedback').textContent = `✓ Mark of ${score}% saved for ${stu.name}. New average: ${stu.average}%.`;
+      }
+    }
+
+    function exportCsv() {
+      const headers = ['id','name','form','stream','mathematics','english','kiswahili','science','average','nectaDivision','parent','phone'];
+      const rows = STUDENTS.map(s => headers.map(h => '"' + (s[h] ?? '') + '"').join(','));
+      const csv = [headers.join(','), ...rows].join('\n');
+      
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'eduscore-tz-complete-data.csv';
+      a.click();
+      document.getElementById('dataStatus').textContent = 'Exported ' + STUDENTS.length + ' student records.';
+    }
+
+    function restoreDemo() {
+      location.reload();
+    }
+
+    // Init
+    window.addEventListener('DOMContentLoaded', () => {
+      renderStudentsTable();
+    });
+  </script>
+</body>
+</html>
