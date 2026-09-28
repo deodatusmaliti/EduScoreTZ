@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import { dbEngine, parseDeviceInfo } from "./db";
+import { syncManager } from "./sync";
 
 const SECRET_SALT = "eduscore_tz_secure_secret_2026";
 
@@ -16,6 +17,85 @@ export interface AppUser {
   status: "active" | "inactive";
   provider: "password" | "google" | "yahoo" | "demo";
   photoURL?: string;
+}
+
+/**
+ * Validates standard email structure according to RFC 5322 institutional specs.
+ * Rejects nonstandard formats (missing @, missing valid domain, missing TLD, consecutive dots, whitespace, illegal characters).
+ */
+export function isStandardEmail(email: string): boolean {
+  if (!email || typeof email !== "string") return false;
+  const clean = email.trim().toLowerCase();
+  if (clean.length < 6 || clean.length > 254) return false;
+
+  // RFC 5322 standard pattern
+  const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
+  if (!emailRegex.test(clean)) return false;
+
+  const parts = clean.split("@");
+  if (parts.length !== 2) return false;
+  const [local, domain] = parts;
+
+  if (local.startsWith(".") || local.endsWith(".") || local.includes("..")) return false;
+  if (domain.startsWith(".") || domain.endsWith(".") || domain.includes("..")) return false;
+
+  const domainParts = domain.split(".");
+  if (domainParts.length < 2) return false;
+  const tld = domainParts[domainParts.length - 1];
+  if (tld.length < 2 || !/^[a-zA-Z]+$/.test(tld)) return false; // TLD must be alphabetic and at least 2 chars
+
+  return true;
+}
+
+/**
+ * Validates email and if non-standard, records security audit violation,
+ * broadcasts real-time security alert to all active logger sessions, and throws error.
+ */
+export function validateEmailOrThrow(email: string, actionType: "LOGIN" | "REGISTER" | "OAUTH" | "RESET", ipAddress: string = "127.0.0.1", userAgent: string = ""): string {
+  const cleanEmail = (email || "").trim().toLowerCase();
+  const dev = parseDeviceInfo(userAgent, ipAddress);
+
+  if (!cleanEmail || !isStandardEmail(cleanEmail)) {
+    const reason = `NON_STANDARD_EMAIL_REJECTED: "${cleanEmail || "(empty)"}" does not conform to standard RFC 5322 institutional format`;
+    
+    // Log security audit event as BLOCKED
+    dbEngine.logSecurityEvent({
+      eventType: actionType === "REGISTER" ? "REGISTRATION" : "LOGIN_FAILED",
+      email: cleanEmail || "invalid-format",
+      ipAddress,
+      userAgent,
+      deviceType: dev.deviceType,
+      browser: dev.browser,
+      os: dev.os,
+      status: "BLOCKED",
+      reason,
+      geoRegion: dev.geoRegion,
+    });
+
+    // Broadcast instant security alert to all loggers & admins
+    syncManager.broadcast("security_alert", {
+      type: "NON_STANDARD_EMAIL_BLOCKED",
+      email: cleanEmail || "(empty)",
+      actionType,
+      ipAddress,
+      geoRegion: dev.geoRegion,
+      timestamp: new Date().toISOString(),
+      message: `Security Shield blocked nonstandard email login attempt: "${cleanEmail || "unspecified"}"`,
+    });
+
+    syncManager.broadcast("login_notification", {
+      type: "LOGIN_ATTEMPT_BLOCKED",
+      email: cleanEmail || "(empty)",
+      ipAddress,
+      status: "BLOCKED",
+      reason: "Nonstandard email rejected by institutional security gate",
+      timestamp: new Date().toISOString(),
+    });
+
+    throw new Error("NON_STANDARD_EMAIL: Please provide a valid standard email address (e.g. user@domain.com or teacher@school.ac.tz). Nonstandard formats are rejected by security policy.");
+  }
+
+  return cleanEmail;
 }
 
 export function hashPassword(password: string, salt: string): string {
@@ -54,8 +134,9 @@ export function verifyToken(token: string): AppUser | null {
 }
 
 export function findUserByEmail(email: string): AppUser | null {
+  const clean = (email || "").trim().toLowerCase();
   const users = dbEngine.getCollection("users") as AppUser[];
-  return users.find((u) => u.email.toLowerCase() === email.trim().toLowerCase()) || null;
+  return users.find((u) => u.email.toLowerCase() === clean) || null;
 }
 
 export function findUsersByIdentifier(identifier: string): AppUser[] {
@@ -78,7 +159,7 @@ export async function registerUser(
   ipAddress: string = "127.0.0.1",
   userAgent: string = ""
 ): Promise<{ user: AppUser; token: string }> {
-  const cleanEmail = email.trim().toLowerCase();
+  const cleanEmail = validateEmailOrThrow(email, "REGISTER", ipAddress, userAgent);
   const dev = parseDeviceInfo(userAgent, ipAddress);
 
   if (findUserByEmail(cleanEmail)) {
@@ -94,6 +175,16 @@ export async function registerUser(
       reason: "Email already registered in system",
       geoRegion: dev.geoRegion,
     });
+
+    syncManager.broadcast("login_notification", {
+      type: "REGISTRATION_FAILED",
+      email: cleanEmail,
+      ipAddress,
+      status: "FAILED",
+      reason: "Email already in use",
+      timestamp: new Date().toISOString(),
+    });
+
     throw new Error("EMAIL_ALREADY_IN_USE: This email is already registered.");
   }
 
@@ -149,6 +240,19 @@ export async function registerUser(
     geoRegion: dev.geoRegion,
   });
 
+  // Notify loggers and system monitors
+  syncManager.broadcast("login_notification", {
+    type: "NEW_REGISTRATION",
+    email: cleanEmail,
+    displayName: newUser.displayName,
+    role: newUser.role,
+    ipAddress,
+    geoRegion: dev.geoRegion,
+    status: "SUCCESS",
+    timestamp: new Date().toISOString(),
+    message: `New account registered: ${newUser.displayName} (${cleanEmail}) as ${role}`,
+  });
+
   const token = generateToken(newUser);
   return { user: sanitizeUser(newUser), token };
 }
@@ -159,7 +263,7 @@ export async function authenticateWithPassword(
   ipAddress: string = "127.0.0.1",
   userAgent: string = ""
 ): Promise<{ user: AppUser; token: string }> {
-  const cleanEmail = email.trim().toLowerCase();
+  const cleanEmail = validateEmailOrThrow(email, "LOGIN", ipAddress, userAgent);
   const dev = parseDeviceInfo(userAgent, ipAddress);
   const user = findUserByEmail(cleanEmail);
 
@@ -176,6 +280,18 @@ export async function authenticateWithPassword(
       reason: "INVALID_CREDENTIAL: User record not found",
       geoRegion: dev.geoRegion,
     });
+
+    syncManager.broadcast("login_notification", {
+      type: "LOGIN_FAILED",
+      email: cleanEmail,
+      ipAddress,
+      geoRegion: dev.geoRegion,
+      status: "FAILED",
+      reason: "Account not found",
+      timestamp: new Date().toISOString(),
+      message: `Failed login attempt for unknown account: ${cleanEmail} from ${ipAddress}`,
+    });
+
     throw new Error("INVALID_CREDENTIAL: No account found with this email address.");
   }
 
@@ -196,6 +312,20 @@ export async function authenticateWithPassword(
         reason: "INVALID_CREDENTIAL: Password hash comparison failed",
         geoRegion: dev.geoRegion,
       });
+
+      syncManager.broadcast("login_notification", {
+        type: "LOGIN_FAILED",
+        email: cleanEmail,
+        displayName: user.displayName,
+        role: user.role,
+        ipAddress,
+        geoRegion: dev.geoRegion,
+        status: "FAILED",
+        reason: "Password mismatch",
+        timestamp: new Date().toISOString(),
+        message: `Failed password login attempt for ${cleanEmail} from ${ipAddress}`,
+      });
+
       throw new Error("INVALID_CREDENTIAL: Incorrect password.");
     }
   }
@@ -218,6 +348,19 @@ export async function authenticateWithPassword(
     geoRegion: dev.geoRegion,
   });
 
+  // Notify active loggers of successful login
+  syncManager.broadcast("login_notification", {
+    type: "LOGIN_SUCCESS",
+    email: cleanEmail,
+    displayName: user.displayName,
+    role: user.role,
+    ipAddress,
+    geoRegion: dev.geoRegion,
+    status: "SUCCESS",
+    timestamp: new Date().toISOString(),
+    message: `User ${user.displayName} (${cleanEmail}) authenticated successfully as ${user.role}`,
+  });
+
   const token = generateToken(user);
   return { user: sanitizeUser(user), token };
 }
@@ -231,7 +374,7 @@ export async function authenticateWithOAuth(
   userAgent: string = "",
   roleOverride?: AppUser["role"]
 ): Promise<{ user: AppUser; token: string }> {
-  const cleanEmail = email.trim().toLowerCase();
+  const cleanEmail = validateEmailOrThrow(email, "OAUTH", ipAddress, userAgent);
   const dev = parseDeviceInfo(userAgent, ipAddress);
   let user = findUserByEmail(cleanEmail);
 
@@ -273,6 +416,19 @@ export async function authenticateWithOAuth(
       reason: `New OAuth user registration via ${provider}`,
       geoRegion: dev.geoRegion,
     });
+
+    syncManager.broadcast("login_notification", {
+      type: "OAUTH_REGISTER",
+      email: cleanEmail,
+      displayName: user.displayName,
+      role: user.role,
+      provider,
+      ipAddress,
+      geoRegion: dev.geoRegion,
+      status: "SUCCESS",
+      timestamp: new Date().toISOString(),
+      message: `New OAuth profile registered via ${provider}: ${user.displayName} (${cleanEmail})`,
+    });
   } else {
     user.lastLogin = new Date().toISOString();
     if (displayName) user.displayName = displayName;
@@ -293,6 +449,19 @@ export async function authenticateWithOAuth(
       reason: `Authenticated via ${provider} OAuth protocol`,
       geoRegion: dev.geoRegion,
     });
+
+    syncManager.broadcast("login_notification", {
+      type: "OAUTH_LOGIN",
+      email: cleanEmail,
+      displayName: user.displayName,
+      role: user.role,
+      provider,
+      ipAddress,
+      geoRegion: dev.geoRegion,
+      status: "SUCCESS",
+      timestamp: new Date().toISOString(),
+      message: `User ${user.displayName} (${cleanEmail}) logged in via ${provider} OAuth`,
+    });
   }
 
   await dbEngine.save();
@@ -307,7 +476,7 @@ export async function requestPasswordRestoration(
   ipAddress: string = "127.0.0.1",
   userAgent: string = ""
 ): Promise<{ success: boolean; message: string; restorationCode?: string; resetToken?: string; userFound: boolean }> {
-  const cleanEmail = email.trim().toLowerCase();
+  const cleanEmail = validateEmailOrThrow(email, "RESET", ipAddress, userAgent);
   const dev = parseDeviceInfo(userAgent, ipAddress);
   const user = findUserByEmail(cleanEmail);
 
@@ -324,6 +493,16 @@ export async function requestPasswordRestoration(
       reason: "Password reset attempted for unregistered email",
       geoRegion: dev.geoRegion,
     });
+
+    syncManager.broadcast("login_notification", {
+      type: "PASSWORD_RESET_ATTEMPT_UNREGISTERED",
+      email: cleanEmail,
+      ipAddress,
+      status: "FAILED",
+      timestamp: new Date().toISOString(),
+      message: `Password reset request for non-existent email: ${cleanEmail}`,
+    });
+
     return {
       success: true,
       userFound: false,
@@ -347,6 +526,16 @@ export async function requestPasswordRestoration(
     reason: `Password reset dispatched. Verification PIN: ${resetEntry.code}`,
     geoRegion: dev.geoRegion,
     restorationCode: resetEntry.code,
+  });
+
+  syncManager.broadcast("login_notification", {
+    type: "PASSWORD_RESET_DISPATCHED",
+    email: cleanEmail,
+    displayName: user.displayName,
+    ipAddress,
+    status: "SUCCESS",
+    timestamp: new Date().toISOString(),
+    message: `Password restoration PIN dispatched for ${user.displayName} (${cleanEmail})`,
   });
 
   return {
@@ -411,6 +600,16 @@ export async function confirmPasswordRestoration(
     status: "SUCCESS",
     reason: "Password successfully restored and updated via cryptographic token",
     geoRegion: dev.geoRegion,
+  });
+
+  syncManager.broadcast("login_notification", {
+    type: "PASSWORD_RESET_CONFIRMED",
+    email: user.email,
+    displayName: user.displayName,
+    ipAddress,
+    status: "SUCCESS",
+    timestamp: new Date().toISOString(),
+    message: `Password successfully reset and restored for ${user.displayName} (${user.email})`,
   });
 
   return {

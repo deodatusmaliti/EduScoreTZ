@@ -21,7 +21,7 @@ import {
   UserCheck,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { UserRole, backendApi } from '../services/backendApi';
+import { UserRole, backendApi, isStandardEmail } from '../services/backendApi';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -460,9 +460,32 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
               {/* Email Field */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  {isSw ? 'Anuani ya Barua Pepe' : 'Email Address'}
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-bold text-slate-700">
+                    {isSw ? 'Anuani ya Barua Pepe' : 'Email Address'}
+                  </label>
+                  {email.trim().length > 0 && (
+                    <span
+                      className={`text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 ${
+                        isStandardEmail(email)
+                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                          : 'bg-rose-100 text-rose-800 border border-rose-300'
+                      }`}
+                    >
+                      {isStandardEmail(email) ? (
+                        <>
+                          <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600" />
+                          <span>Standard RFC 5322 Email</span>
+                        </>
+                      ) : (
+                        <>
+                          <AlertCircle className="w-2.5 h-2.5 text-rose-600" />
+                          <span>Standard Format Required (name@domain.tld)</span>
+                        </>
+                      )}
+                    </span>
+                  )}
+                </div>
                 <div className="relative">
                   <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
                   <input
@@ -471,9 +494,23 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="teacher@school.ac.tz or deodatusmaliti2@gmail.com"
-                    className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                    className={`w-full pl-9 pr-3 py-2 bg-slate-50 border rounded-xl text-xs font-medium text-slate-900 focus:bg-white focus:outline-none focus:ring-2 ${
+                      email.trim().length > 0 && !isStandardEmail(email)
+                        ? 'border-rose-400 focus:ring-rose-500 focus:border-rose-500'
+                        : 'border-slate-300 focus:ring-amber-500 focus:border-amber-500'
+                    }`}
                   />
                 </div>
+                {email.trim().length > 0 && !isStandardEmail(email) && (
+                  <p className="text-[11px] text-rose-600 mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3 shrink-0" />
+                    <span>
+                      {isSw
+                        ? 'Tafadhali ingiza barua pepe kamili na sahihi (mfano: mtumiaji@shule.ac.tz au jina@gmail.com).'
+                        : 'Invalid format. Backend login requires standard RFC 5322 email (e.g. user@school.ac.tz or user@gmail.com).'}
+                    </span>
+                  </p>
+                )}
               </div>
 
               {/* Password Field */}

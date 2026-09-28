@@ -163,10 +163,10 @@ function MainAppContent() {
     const loadInitialServerData = async () => {
       try {
         const [serverStudents, serverCurriculum, serverMarks, serverPayments] = await Promise.allSettled([
-          backendApi.getCollection<Student[]>('students'),
-          backendApi.getCollection<CurriculumSubject[]>('curriculum'),
-          backendApi.getCollection<TeacherMark[]>('teacherMarks'),
-          backendApi.getCollection<PaymentRecord[]>('payments'),
+          backendApi.getCollection<Student>('students'),
+          backendApi.getCollection<CurriculumSubject>('curriculum'),
+          backendApi.getCollection<TeacherMark>('teacherMarks'),
+          backendApi.getCollection<PaymentRecord>('payments'),
         ]);
 
         if (serverStudents.status === 'fulfilled' && serverStudents.value && serverStudents.value.length > 0) {
@@ -230,22 +230,22 @@ function MainAppContent() {
         }
       } else if (event === 'batch_sync' || event === 'deduplicate_sync') {
         if (payload.collection === 'students' || !payload.collection) {
-          backendApi.getCollection<Student[]>('students').then((d) => {
+          backendApi.getCollection<Student>('students').then((d) => {
             if (Array.isArray(d)) setStudents(calculateClassPositions(d));
           });
         }
         if (payload.collection === 'curriculum' || !payload.collection) {
-          backendApi.getCollection<CurriculumSubject[]>('curriculum').then((d) => {
+          backendApi.getCollection<CurriculumSubject>('curriculum').then((d) => {
             if (Array.isArray(d)) setCurriculum(d);
           });
         }
         if (payload.collection === 'teacherMarks' || !payload.collection) {
-          backendApi.getCollection<TeacherMark[]>('teacherMarks').then((d) => {
+          backendApi.getCollection<TeacherMark>('teacherMarks').then((d) => {
             if (Array.isArray(d)) setTeacherMarks(d);
           });
         }
         if (payload.collection === 'payments' || !payload.collection) {
-          backendApi.getCollection<PaymentRecord[]>('payments').then((d) => {
+          backendApi.getCollection<PaymentRecord>('payments').then((d) => {
             if (Array.isArray(d)) setPayments(d);
           });
         }

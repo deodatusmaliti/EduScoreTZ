@@ -60,6 +60,7 @@ import {
 } from '../services/backendApi';
 import { useAuth } from '../context/AuthContext';
 import { exportSecurityAuditPdf, exportSecurityAuditCsv } from '../utils/securityAuditExporter';
+import { BandwidthStorageSection } from './BandwidthStorageSection';
 
 interface BackendControlRoomProps {
   language?: 'en' | 'sw';
@@ -98,7 +99,7 @@ export const BackendControlRoom: React.FC<BackendControlRoomProps> = ({
   const isSw = language === 'sw';
 
   const [stats, setStats] = useState<BackendStats | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'securityAudit' | 'conflicts' | 'explorer' | 'duplicates' | 'users' | 'logs'>('securityAudit');
+  const [activeTab, setActiveTab] = useState<'bandwidthStorage' | 'overview' | 'securityAudit' | 'conflicts' | 'explorer' | 'duplicates' | 'users' | 'logs'>('bandwidthStorage');
   const [selectedCollection, setSelectedCollection] = useState<'students' | 'curriculum' | 'teacherMarks' | 'payments' | 'users' | 'auditLogs'>('students');
   const [collectionData, setCollectionData] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -968,6 +969,18 @@ export const BackendControlRoom: React.FC<BackendControlRoomProps> = ({
       {/* Navigation Tabs */}
       <div className="flex border-b border-slate-200 gap-2 overflow-x-auto text-xs font-bold">
         <button
+          onClick={() => setActiveTab('bandwidthStorage')}
+          className={`pb-3 px-4 border-b-2 flex items-center gap-2 transition-all cursor-pointer ${
+            activeTab === 'bandwidthStorage' ? 'border-amber-500 text-amber-700' : 'border-transparent text-slate-500 hover:text-slate-900'
+          }`}
+        >
+          <HardDrive className="w-4 h-4 text-indigo-600" />
+          <span>{isSw ? 'Bandwidth & Hifadhi ya 1TB (Telemetry)' : '1TB Bandwidth & Storage Analytics'}</span>
+          <span className="px-1.5 py-0.2 bg-indigo-100 text-indigo-800 font-bold rounded-full text-[10px]">
+            1,000 GB
+          </span>
+        </button>
+        <button
           onClick={() => setActiveTab('securityAudit')}
           className={`pb-3 px-4 border-b-2 flex items-center gap-2 transition-all cursor-pointer ${
             activeTab === 'securityAudit' ? 'border-amber-500 text-amber-700' : 'border-transparent text-slate-500 hover:text-slate-900'
@@ -1036,6 +1049,13 @@ export const BackendControlRoom: React.FC<BackendControlRoomProps> = ({
           <span>{isSw ? 'Mtiririko wa SSE (Live Events)' : 'Real-Time Sync Stream'}</span>
         </button>
       </div>
+
+      {/* ========================================================= */}
+      {/* TAB: 1TB STORAGE & BANDWIDTH REAL-TIME TELEMETRY SECTION  */}
+      {/* ========================================================= */}
+      {activeTab === 'bandwidthStorage' && (
+        <BandwidthStorageSection language={language} />
+      )}
 
       {/* ========================================================= */}
       {/* TAB: CONFLICT RESOLUTION & DATA ALIGNMENT UI COMPONENT    */}

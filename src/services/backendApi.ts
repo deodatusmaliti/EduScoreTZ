@@ -73,6 +73,89 @@ export interface AnnouncementItem {
   readBy?: string[];
 }
 
+export interface RealtimeBandwidthPoint {
+  time: string;
+  inboundKBps: number;
+  outboundKBps: number;
+  totalKBps: number;
+  requestsPerSec: number;
+  activeSockets: number;
+}
+
+export interface HourlyBandwidthTrend {
+  hour: string;
+  inboundMB: number;
+  outboundMB: number;
+  totalMB: number;
+  requestCount: number;
+  peakThroughputMBps: number;
+}
+
+export interface DailyStorageBandwidthTrend {
+  date: string;
+  storageUsedGB: number;
+  bandwidthConsumedGB: number;
+  activeStudents: number;
+  auditEvents: number;
+  syncTransactions: number;
+}
+
+export interface StorageCategoryBreakdown {
+  id: string;
+  name: string;
+  category: string;
+  sizeMB: number;
+  sizeFormatted: string;
+  percentOf1TB: number;
+  percentOfUsed: number;
+  itemCount: number;
+  color: string;
+}
+
+export interface BackendStorageBandwidthTelemetry {
+  storage: {
+    totalCapacityGB: number;
+    totalCapacityFormatted: string;
+    totalUsedBytes: number;
+    totalUsedGB: number;
+    totalUsedMB: number;
+    totalUsedFormatted: string;
+    freeHeadroomGB: number;
+    freeHeadroomFormatted: string;
+    usedPercentage: number;
+    freePercentage: number;
+    compressionRatio: string;
+    deduplicationSavingsMB: number;
+    categories: StorageCategoryBreakdown[];
+    growthRateMBPerDay: number;
+    healthStatus: 'OPTIMAL' | 'ATTENTION' | 'CRITICAL';
+  };
+  bandwidth: {
+    currentInboundKBps: number;
+    currentOutboundKBps: number;
+    currentTotalKBps: number;
+    peakBandwidthMBps24h: number;
+    totalTransferredTodayGB: number;
+    totalTransferredMonthGB: number;
+    activeNodesCount: number;
+    averageLatencyMs: number;
+    iopsCapacity: number;
+    liveSlidingWindow: RealtimeBandwidthPoint[];
+  };
+  historicalTrends: {
+    hourly24h: HourlyBandwidthTrend[];
+    daily7d: DailyStorageBandwidthTrend[];
+    monthly30d: DailyStorageBandwidthTrend[];
+  };
+  clusterInfo: {
+    engineName: string;
+    tier: string;
+    storageEngine: string;
+    activeNodes: Array<{ id: string; name: string; region: string; status: string; latencyMs: number; storageAllocatedGB: number }>;
+  };
+  generatedAt: string;
+}
+
 export interface BackendStats {
   totalStudents: number;
   totalCurriculum: number;
@@ -94,6 +177,32 @@ export interface BackendStats {
     connectedAt: string;
     userEmail: string;
   }>;
+}
+
+/**
+ * Validates standard email address RFC 5322 compliance
+ */
+export function isStandardEmail(email: string): boolean {
+  if (!email || typeof email !== 'string') return false;
+  const clean = email.trim().toLowerCase();
+  if (clean.length < 6 || clean.length > 254) return false;
+
+  const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
+  if (!emailRegex.test(clean)) return false;
+
+  const parts = clean.split('@');
+  if (parts.length !== 2) return false;
+  const [local, domain] = parts;
+
+  if (local.startsWith('.') || local.endsWith('.') || local.includes('..')) return false;
+  if (domain.startsWith('.') || domain.endsWith('.') || domain.includes('..')) return false;
+
+  const domainParts = domain.split('.');
+  if (domainParts.length < 2) return false;
+  const tld = domainParts[domainParts.length - 1];
+  if (tld.length < 2 || !/^[a-zA-Z]+$/.test(tld)) return false;
+
+  return true;
 }
 
 const TOKEN_KEY = 'eduscore_tz_auth_token';
@@ -159,8 +268,19 @@ class BackendApiService {
         this.notifyListeners('connection_status', { connected: false });
       };
 
-      // Custom events
-      const eventNames = ['handshake', 'ping', 'doc_change', 'batch_sync', 'deduplicate_sync', 'auth_change', 'sync_pulse', 'announcement_broadcast'];
+      // Custom events including login notifications & security alerts
+      const eventNames = [
+        'handshake',
+        'ping',
+        'doc_change',
+        'batch_sync',
+        'deduplicate_sync',
+        'auth_change',
+        'sync_pulse',
+        'announcement_broadcast',
+        'login_notification',
+        'security_alert',
+      ];
       eventNames.forEach((name) => {
         this.eventSource?.addEventListener(name, (e: MessageEvent) => {
           try {
@@ -193,41 +313,44 @@ class BackendApiService {
     });
   }
 
-  public getIsConnected(): boolean {
-    return this.isConnected;
-  }
+  // --- Authentication ---
 
-  public reconnectStream() {
-    this.initRealtimeStream();
-  }
+  public async login(email: string, password: string): Promise<{ user: AppUser; token: string }> {
+    const cleanEmail = (email || '').trim();
+    if (!isStandardEmail(cleanEmail)) {
+      throw new Error('NON_STANDARD_EMAIL: Please enter a valid standard email address (e.g. user@domain.com or teacher@school.ac.tz).');
+    }
 
-  // --- Auth Methods ---
-  public async loginWithEmail(email: string, pass: string): Promise<{ user: AppUser; token: string }> {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password: pass }),
+      headers: this.getHeaders(),
+      body: JSON.stringify({ email: cleanEmail, password }),
     });
     const data = await res.json();
     if (!res.ok) {
-      throw new Error(data.error || 'Authentication failed');
+      throw new Error(data.error || 'Login failed');
     }
     this.setToken(data.token);
     localStorage.setItem(USER_KEY, JSON.stringify(data.user));
     return data;
   }
 
-  public async registerWithEmail(
+  public async register(
     email: string,
-    pass: string,
+    password: string,
     displayName: string,
-    role: AppUser['role'] = 'teacher',
+    role: UserRole = 'teacher',
     institution: string = 'Jitegemee Secondary School'
   ): Promise<{ user: AppUser; token: string }> {
+    const cleanEmail = (email || '').trim();
+    if (!isStandardEmail(cleanEmail)) {
+      throw new Error('NON_STANDARD_EMAIL: Please enter a valid standard email address (e.g. user@domain.com or teacher@school.ac.tz).');
+    }
+
     const res = await fetch('/api/auth/register', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password: pass, displayName, role, institution }),
+      headers: this.getHeaders(),
+      body: JSON.stringify({ email: cleanEmail, password, displayName, role, institution }),
     });
     const data = await res.json();
     if (!res.ok) {
@@ -238,61 +361,46 @@ class BackendApiService {
     return data;
   }
 
-  public async loginWithOAuth(
+  public async loginOAuth(
     provider: 'google' | 'yahoo' | 'demo',
     email: string,
     displayName?: string,
     photoURL?: string,
     role?: UserRole
   ): Promise<{ user: AppUser; token: string }> {
+    const cleanEmail = (email || '').trim();
+    if (!isStandardEmail(cleanEmail)) {
+      throw new Error('NON_STANDARD_EMAIL: Please enter a valid standard email address.');
+    }
+
     const res = await fetch('/api/auth/oauth', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ provider, email, displayName, photoURL, role }),
+      headers: this.getHeaders(),
+      body: JSON.stringify({ provider, email: cleanEmail, displayName, photoURL, role }),
     });
     const data = await res.json();
     if (!res.ok) {
-      throw new Error(data.error || `${provider} login failed`);
+      throw new Error(data.error || 'OAuth login failed');
     }
     this.setToken(data.token);
     localStorage.setItem(USER_KEY, JSON.stringify(data.user));
     return data;
   }
 
-  public async loginDemo(role: UserRole): Promise<{ user: AppUser; token: string }> {
-    const roleNames: Record<UserRole, { name: string; email: string }> = {
-      admin: { name: 'Mwl. Peter Masanja (Principal)', email: 'principal@jitegemee.ac.tz' },
-      headteacher: { name: 'Mwl. Grace Mtenga (Academic Head)', email: 'academic@jitegemee.ac.tz' },
-      teacher: { name: 'Mwl. Josephat Kimaro (Science Dept)', email: 'jkimaro@jitegemee.ac.tz' },
-      parent: { name: 'Bw. Hassan Rashid (Parent)', email: 'hrashid@gmail.com' },
-      inspector: { name: 'Dr. Neema Mushi (District Inspector)', email: 'inspector@moe.go.tz' },
-    };
-    const demo = roleNames[role] || roleNames.teacher;
-    return this.loginWithOAuth('demo', demo.email, demo.name, undefined, role);
-  }
-
-  public async updateUserRole(email: string, role: UserRole): Promise<{ success: boolean; user: AppUser }> {
-    const res = await fetch('/api/auth/update-role', {
-      method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify({ email, role }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      throw new Error(data.error || 'Failed to update user role');
+  public async forgotPassword(email: string): Promise<{ success: boolean; message: string; restorationCode?: string; resetToken?: string }> {
+    const cleanEmail = (email || '').trim();
+    if (!isStandardEmail(cleanEmail)) {
+      throw new Error('NON_STANDARD_EMAIL: Please enter a valid standard email address.');
     }
-    return data;
-  }
 
-  public async sendPasswordReset(email: string): Promise<{ success: boolean; message: string; restorationCode?: string }> {
     const res = await fetch('/api/auth/forgot-password', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
+      headers: this.getHeaders(),
+      body: JSON.stringify({ email: cleanEmail }),
     });
     const data = await res.json();
     if (!res.ok) {
-      throw new Error(data.error || 'Password reset request failed');
+      throw new Error(data.error || 'Password restoration request failed');
     }
     return data;
   }
@@ -300,24 +408,20 @@ class BackendApiService {
   public async confirmPasswordReset(tokenOrCode: string, newPassword: string): Promise<{ success: boolean; message: string }> {
     const res = await fetch('/api/auth/reset-password-confirm', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: this.getHeaders(),
       body: JSON.stringify({ tokenOrCode, newPassword }),
     });
     const data = await res.json();
     if (!res.ok) {
-      throw new Error(data.error || 'Failed to confirm password reset');
+      throw new Error(data.error || 'Password reset confirmation failed');
     }
     return data;
   }
 
-  public async recoverUsername(identifier: string): Promise<{
-    success: boolean;
-    message: string;
-    matches: Array<{ email: string; displayName: string; role: string; institution: string }>;
-  }> {
+  public async recoverUsername(identifier: string): Promise<{ success: boolean; message: string; matches: Array<{ email: string; displayName: string; role: string; institution: string }> }> {
     const res = await fetch('/api/auth/recover-username', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: this.getHeaders(),
       body: JSON.stringify({ identifier }),
     });
     const data = await res.json();
@@ -333,35 +437,49 @@ class BackendApiService {
       headers: this.getHeaders(),
       body: JSON.stringify({ email }),
     });
-    return res.json();
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Admin reset dispatch failed');
+    }
+    return data;
   }
 
-  public async getSecurityAuditLogs(): Promise<{ logs: SecurityAuditEvent[]; summary: SecurityAuditSummary }> {
+  public async getSecurityAudit(): Promise<{ logs: SecurityAuditEvent[]; summary: SecurityAuditSummary }> {
     const res = await fetch('/api/auth/security-audit', {
       headers: this.getHeaders(),
     });
     if (!res.ok) {
-      throw new Error('Failed to load security audit logs');
+      throw new Error('Failed to fetch security audit logs');
     }
     return res.json();
   }
 
-  public async getMe(): Promise<AppUser | null> {
-    const tok = this.getToken();
-    if (!tok) return null;
+  public async getMe(): Promise<{ user: AppUser } | null> {
     try {
       const res = await fetch('/api/auth/me', {
         headers: this.getHeaders(),
       });
       if (!res.ok) return null;
-      const data = await res.json();
-      return data.user;
+      return res.json();
     } catch {
       return null;
     }
   }
 
-  public async getUsers(): Promise<AppUser[]> {
+  public async updateUserRole(email: string, role: UserRole): Promise<{ success: boolean; user: AppUser }> {
+    const res = await fetch('/api/auth/update-role', {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ email, role }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Failed to update user role');
+    }
+    return data;
+  }
+
+  public async getAllUsers(): Promise<AppUser[]> {
     try {
       const res = await fetch('/api/auth/users', {
         headers: this.getHeaders(),
@@ -380,15 +498,7 @@ class BackendApiService {
     this.notifyListeners('auth_change', { action: 'LOGOUT' });
   }
 
-  public async triggerBroadcastPulse(): Promise<{ success: boolean; dispatchedToNodes: number; timestamp: string; authority: string }> {
-    const res = await fetch('/api/sync/broadcast-pulse', {
-      method: 'POST',
-      headers: this.getHeaders(),
-    });
-    return res.json();
-  }
-
-  // --- Database Operations ---
+  // --- Database & Statistics ---
 
   public async getStats(): Promise<BackendStats> {
     const res = await fetch('/api/db/stats', {
@@ -400,37 +510,70 @@ class BackendApiService {
     return res.json();
   }
 
-  public async getCollection<T = any>(collectionName: string): Promise<T> {
-    const res = await fetch(`/api/db/collections/${collectionName}`, {
+  public async getBandwidthStorageMetrics(): Promise<BackendStorageBandwidthTelemetry> {
+    const res = await fetch('/api/db/bandwidth-storage-metrics', {
       headers: this.getHeaders(),
     });
     if (!res.ok) {
-      throw new Error(`Failed to load collection ${collectionName}`);
+      throw new Error('Failed to fetch bandwidth and storage telemetry metrics');
     }
-    const data = await res.json();
-    return data.data;
+    return res.json();
   }
 
-  public async saveDocument<T = any>(collectionName: string, id: string, docData: T): Promise<T> {
-    const res = await fetch(`/api/db/collections/${collectionName}`, {
+  public async testBandwidthPulse(simulatedBytes: number = 2500000): Promise<{ success: boolean; simulatedBytes: number; telemetry: BackendStorageBandwidthTelemetry }> {
+    const res = await fetch('/api/db/test-bandwidth-pulse', {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ simulatedBytes }),
+    });
+    if (!res.ok) {
+      throw new Error('Failed to trigger bandwidth test pulse');
+    }
+    return res.json();
+  }
+
+  public async broadcastSyncPulse(): Promise<{ success: boolean; dispatchedToNodes: number; timestamp: string }> {
+    const res = await fetch('/api/sync/broadcast-pulse', {
+      method: 'POST',
+      headers: this.getHeaders(),
+    });
+    if (!res.ok) {
+      throw new Error('Failed to dispatch instant sync pulse');
+    }
+    return res.json();
+  }
+
+  public async getCollection<T = any>(collection: string): Promise<T[]> {
+    const res = await fetch(`/api/db/collections/${collection}`, {
+      headers: this.getHeaders(),
+    });
+    if (!res.ok) {
+      throw new Error(`Failed to fetch collection ${collection}`);
+    }
+    const data = await res.json();
+    return data.data || [];
+  }
+
+  public async setDocument<T = any>(collection: string, id: string, docData: T): Promise<T> {
+    const res = await fetch(`/api/db/collections/${collection}`, {
       method: 'POST',
       headers: this.getHeaders(),
       body: JSON.stringify({ id, data: docData }),
     });
-    const json = await res.json();
+    const data = await res.json();
     if (!res.ok) {
-      throw new Error(json.error || 'Failed to save document');
+      throw new Error(data.error || 'Failed to save document');
     }
-    return json.doc;
+    return data.doc;
   }
 
-  public async deleteDocument(collectionName: string, id: string): Promise<boolean> {
-    const res = await fetch(`/api/db/collections/${collectionName}/${id}`, {
+  public async deleteDocument(collection: string, id: string): Promise<boolean> {
+    const res = await fetch(`/api/db/collections/${collection}/${id}`, {
       method: 'DELETE',
       headers: this.getHeaders(),
     });
-    const json = await res.json();
-    return json.success;
+    const data = await res.json();
+    return data.success || false;
   }
 
   public async batchImport(collection: string, items: any[], mode: 'replace' | 'merge' = 'merge') {
@@ -446,7 +589,7 @@ class BackendApiService {
     return data;
   }
 
-  public async deduplicate(collection: 'students' | 'users' | 'teacherMarks') {
+  public async deduplicate(collection: string) {
     const res = await fetch('/api/db/deduplicate', {
       method: 'POST',
       headers: this.getHeaders(),
@@ -511,6 +654,60 @@ class BackendApiService {
     });
     return res.ok;
   }
+
+  // --- Convenience Alias Methods ---
+  public async saveDocument<T = any>(collection: string, id: string, docData: T): Promise<T> {
+    return this.setDocument(collection, id, docData);
+  }
+
+  public async getUsers(): Promise<AppUser[]> {
+    return this.getAllUsers();
+  }
+
+  public async getSecurityAuditLogs(): Promise<{ logs: SecurityAuditEvent[]; summary: SecurityAuditSummary }> {
+    return this.getSecurityAudit();
+  }
+
+  public async triggerBroadcastPulse(): Promise<{ success: boolean; dispatchedToNodes: number; timestamp: string }> {
+    return this.broadcastSyncPulse();
+  }
+
+  public reconnectStream() {
+    this.initRealtimeStream();
+  }
+
+  public async sendPasswordReset(email: string) {
+    return this.forgotPassword(email);
+  }
+
+  public async loginWithEmail(email: string, password: string) {
+    return this.login(email, password);
+  }
+
+  public async registerWithEmail(
+    email: string,
+    password: string,
+    displayName: string,
+    role: UserRole = 'teacher',
+    institution: string = 'Jitegemee Secondary School'
+  ) {
+    return this.register(email, password, displayName, role, institution);
+  }
+
+  public async loginWithOAuth(
+    provider: 'google' | 'yahoo' | 'demo',
+    email: string,
+    displayName?: string,
+    photoURL?: string,
+    role?: UserRole
+  ) {
+    return this.loginOAuth(provider, email, displayName, photoURL, role);
+  }
+
+  public async loginDemo(role: UserRole = 'teacher') {
+    return this.loginOAuth('demo', `${role}@demo.school.ac.tz`, `Demo ${role}`, undefined, role);
+  }
 }
 
 export const backendApi = new BackendApiService();
+

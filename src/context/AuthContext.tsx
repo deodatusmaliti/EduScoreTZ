@@ -38,10 +38,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Authoritative re-validation with backend
   const refreshAuth = useCallback(async () => {
     try {
-      const currentUser = await backendApi.getMe();
-      if (currentUser) {
-        setUser(currentUser);
-        localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
+      const current = await backendApi.getMe();
+      if (current?.user) {
+        setUser(current.user);
+        localStorage.setItem(USER_KEY, JSON.stringify(current.user));
       } else {
         // Check if there is a local cached profile to re-authenticate with backend
         const saved = localStorage.getItem(USER_KEY);

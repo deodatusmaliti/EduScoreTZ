@@ -13,6 +13,7 @@ import {
   sanitizeUser,
 } from "./auth";
 import { syncManager } from "./sync";
+import { telemetryEngine } from "./metrics";
 
 export const apiRouter = Router();
 
@@ -269,6 +270,31 @@ apiRouter.get("/db/stats", (req: Request, res: Response) => {
     activeNodesCount: syncManager.getActiveClientCount(),
     connectedNodes,
   });
+});
+
+apiRouter.get("/db/bandwidth-storage-metrics", (req: Request, res: Response) => {
+  try {
+    const telemetry = telemetryEngine.getTelemetry();
+    return res.json(telemetry);
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message || "Failed to retrieve telemetry metrics" });
+  }
+});
+
+apiRouter.post("/db/test-bandwidth-pulse", (req: Request, res: Response) => {
+  try {
+    const { simulatedBytes = 2500000 } = req.body;
+    telemetryEngine.recordRequest(simulatedBytes * 0.3, simulatedBytes * 0.7);
+    syncManager.broadcast("sync_pulse", {
+      type: "BANDWIDTH_PULSE_TEST",
+      timestamp: new Date().toISOString(),
+      simulatedBytes,
+      message: `Diagnostic bandwidth throughput test pulse (${(simulatedBytes / 1024 / 1024).toFixed(2)} MB) executed successfully across 1TB backend mesh.`,
+    });
+    return res.json({ success: true, simulatedBytes, telemetry: telemetryEngine.getTelemetry() });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message || "Failed to test bandwidth pulse" });
+  }
 });
 
 apiRouter.get("/db/collections/:collection", (req: Request, res: Response) => {
