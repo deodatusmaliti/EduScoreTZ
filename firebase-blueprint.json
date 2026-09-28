@@ -1,0 +1,178 @@
+{
+  "entities": {
+    "Student": {
+      "title": "Student",
+      "description": "Tanzanian student academic and personal record with NECTA grades",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 200 },
+        "gender": { "type": "string", "enum": ["M", "F"] },
+        "form": { "type": "string", "maxLength": 50 },
+        "stream": { "type": "string", "maxLength": 50 },
+        "school": { "type": "string", "maxLength": 200 },
+        "region": { "type": "string", "maxLength": 100 },
+        "district": { "type": "string", "maxLength": 100 },
+        "term": { "type": "string", "maxLength": 50 },
+        "year": { "type": "string", "maxLength": 20 },
+        "parent": { "type": "string", "maxLength": 200 },
+        "phone": { "type": "string", "maxLength": 50 },
+        "whatsapp": { "type": "string", "maxLength": 50 },
+        "email": { "type": "string", "maxLength": 150 },
+        "feeStatus": { "type": "string", "enum": ["Paid", "Partial", "Outstanding", "Scholarship", "Cleared"] },
+        "feeBalance": { "type": "number" },
+        "discipline": { "type": "string", "enum": ["Good", "Satisfactory", "Monitoring", "Intervention"] },
+        "healthSupport": { "type": "string", "maxLength": 500 },
+        "attendance": { "type": "number" },
+        "mathematics": { "type": "number" },
+        "english": { "type": "number" },
+        "kiswahili": { "type": "number" },
+        "science": { "type": "number" },
+        "physics": { "type": "number" },
+        "chemistry": { "type": "number" },
+        "geography": { "type": "number" },
+        "history": { "type": "number" },
+        "average": { "type": "number" },
+        "nectaGrade": { "type": "string", "enum": ["A", "B", "C", "D", "F"] },
+        "nectaPoints": { "type": "number" },
+        "nectaDivision": { "type": "string", "enum": ["Division I", "Division II", "Division III", "Division IV", "Division 0"] },
+        "notes": { "type": "string", "maxLength": 2000 },
+        "ownerId": { "type": "string", "maxLength": 128 },
+        "updatedAt": { "type": "string", "maxLength": 100 }
+      },
+      "required": ["id", "name", "form", "school"]
+    },
+    "CurriculumSubject": {
+      "title": "CurriculumSubject",
+      "description": "Curriculum syllabus tracking item for national syllabus coverage",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "code": { "type": "string", "maxLength": 50 },
+        "name": { "type": "string", "maxLength": 100 },
+        "syllabusCategory": { "type": "string", "maxLength": 100 },
+        "formLevels": { "type": "string", "maxLength": 100 },
+        "coveredPct": { "type": "number" },
+        "targetPct": { "type": "number" },
+        "practicalLabs": { "type": "number" },
+        "behindDays": { "type": "number" },
+        "isBottleneck": { "type": "boolean" },
+        "ownerId": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["id", "code", "name"]
+    },
+    "TeacherMark": {
+      "title": "TeacherMark",
+      "description": "Continuous assessment mark recorded by teacher",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "studentId": { "type": "string", "maxLength": 128 },
+        "studentName": { "type": "string", "maxLength": 200 },
+        "subject": { "type": "string", "maxLength": 100 },
+        "teacher": { "type": "string", "maxLength": 200 },
+        "score": { "type": "number" },
+        "term": { "type": "string", "maxLength": 50 },
+        "note": { "type": "string", "maxLength": 1000 },
+        "timestamp": { "type": "string", "maxLength": 100 },
+        "ownerId": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["id", "studentId", "subject", "score"]
+    },
+    "PaymentRecord": {
+      "title": "PaymentRecord",
+      "description": "Tuition and school fee payment transaction",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "studentId": { "type": "string", "maxLength": 128 },
+        "studentName": { "type": "string", "maxLength": 200 },
+        "schoolName": { "type": "string", "maxLength": 200 },
+        "amount": { "type": "number" },
+        "currency": { "type": "string", "enum": ["TZS", "USD", "EUR", "GBP"] },
+        "paymentMethod": { "type": "string", "maxLength": 100 },
+        "controlNumber": { "type": "string", "maxLength": 100 },
+        "status": { "type": "string", "enum": ["Completed", "Pending"] },
+        "timestamp": { "type": "string", "maxLength": 100 },
+        "ownerId": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["id", "studentId", "amount", "controlNumber"]
+    },
+    "AppSettingsDoc": {
+      "title": "AppSettingsDoc",
+      "description": "Institution and system settings",
+      "type": "object",
+      "properties": {
+        "schoolName": { "type": "string", "maxLength": 200 },
+        "institutionType": { "type": "string", "maxLength": 50 },
+        "region": { "type": "string", "maxLength": 100 },
+        "district": { "type": "string", "maxLength": 100 },
+        "academicYear": { "type": "string", "maxLength": 20 },
+        "activeTerm": { "type": "string", "maxLength": 50 },
+        "language": { "type": "string", "enum": ["en", "sw"] },
+        "headteacherName": { "type": "string", "maxLength": 200 },
+        "schoolMotto": { "type": "string", "maxLength": 500 },
+        "autoSmsAlerts": { "type": "boolean" },
+        "ownerId": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["schoolName", "academicYear"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile with role and access metadata",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "displayName": { "type": "string", "maxLength": 200 },
+        "email": { "type": "string", "maxLength": 150 },
+        "role": { "type": "string", "enum": ["admin", "headteacher", "teacher", "parent", "inspector"] },
+        "photoURL": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string", "maxLength": 100 }
+      },
+      "required": ["uid", "email"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "Real-time system audit and sync transaction event",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "action": { "type": "string", "maxLength": 100 },
+        "details": { "type": "string", "maxLength": 2000 },
+        "userEmail": { "type": "string", "maxLength": 150 },
+        "timestamp": { "type": "string", "maxLength": 100 }
+      },
+      "required": ["id", "action", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/students/{studentId}": {
+      "schema": "Student",
+      "description": "Students academic database collection"
+    },
+    "/curriculum/{subjectId}": {
+      "schema": "CurriculumSubject",
+      "description": "Curriculum syllabus management collection"
+    },
+    "/teacherMarks/{markId}": {
+      "schema": "TeacherMark",
+      "description": "Continuous teacher assessments and marks"
+    },
+    "/payments/{paymentId}": {
+      "schema": "PaymentRecord",
+      "description": "Tuition fees and payments transactions"
+    },
+    "/settings/{settingId}": {
+      "schema": "AppSettingsDoc",
+      "description": "Application and institutional configuration document"
+    },
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Registered user profile and authentication roles"
+    },
+    "/auditLogs/{logId}": {
+      "schema": "AuditLog",
+      "description": "Cloud backend synchronization audit trail"
+    }
+  }
+}

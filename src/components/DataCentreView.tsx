@@ -262,7 +262,7 @@ export const DataCentreView: React.FC<DataCentreViewProps> = ({
           <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
             <button
               onClick={handleExportCsv}
-              className="flex-1 sm:flex-none px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-lg transition flex items-center justify-center space-x-1.5 shadow-xs"
+              className="flex-1 sm:flex-none px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-lg transition flex items-center justify-center space-x-1.5 shadow-xs cursor-pointer"
             >
               <Download className="w-3.5 h-3.5 text-amber-400" />
               <span>Export Full CSV</span>

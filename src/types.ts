@@ -199,4 +199,5 @@ export type ViewTab =
   | 'reports'
   | 'messages'
   | 'data'
+  | 'backend'
   | 'settings';

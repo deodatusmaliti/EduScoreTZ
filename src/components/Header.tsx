@@ -1,5 +1,5 @@
 import React from 'react';
-import { Menu, Search, Printer, Download, Sparkles } from 'lucide-react';
+import { Menu, Search, Printer, Download, Sparkles, Megaphone } from 'lucide-react';
 import { ViewTab } from '../types';
 import { DICTIONARY } from '../utils/necta';
 
@@ -11,6 +11,7 @@ interface HeaderProps {
   language: 'en' | 'sw';
   onPrint: () => void;
   onExportCsv: () => void;
+  onOpenAnnouncements?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -21,6 +22,7 @@ export const Header: React.FC<HeaderProps> = ({
   language,
   onPrint,
   onExportCsv,
+  onOpenAnnouncements,
 }) => {
   const dict = DICTIONARY[language];
 
@@ -89,6 +91,13 @@ export const Header: React.FC<HeaderProps> = ({
             ? 'Automated SMS, WhatsApp and Email templates with live academic progress indicators.'
             : 'Kutuma ujumbe mfupi wa SMS na WhatsApp kwa wazazi wenye matokeo na mahudhurio ya hivi punde.',
         };
+      case 'backend':
+        return {
+          title: language === 'en' ? 'Cloud Backend & 1TB Scalable Database' : 'Hifadhi ya Wingu & Database ya 1TB',
+          subtitle: language === 'en'
+            ? 'Enterprise Google Cloud Firestore integration, real-time multi-device sync, and anti-duplicate ledger engine.'
+            : 'Mfumo wa wingu wa Firestore, usawazishaji wa moja kwa moja wa vifaa vingi, na ukaguzi wa nakala rudufu.',
+        };
       case 'data':
         return {
           title: language === 'en' ? 'Data Centre & Records Management' : 'Kituo cha Data & Kumbukumbu',
@@ -153,12 +162,25 @@ export const Header: React.FC<HeaderProps> = ({
             />
           </div>
 
+          {/* Quick Announcements broadcast button */}
+          {onOpenAnnouncements && (
+            <button
+              id="btn-header-announcements"
+              onClick={onOpenAnnouncements}
+              title={language === 'sw' ? 'Tuma Matangazo kwa Walimu, Wakuu wa Shule na Wasimamizi' : 'Send Announcements to Heads, Administrators & Teachers (Attach Documents)'}
+              className="px-3 py-2 text-indigo-950 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-lg text-xs font-bold transition flex items-center space-x-1.5 shrink-0 cursor-pointer shadow-xs"
+            >
+              <Megaphone className="w-3.5 h-3.5 text-indigo-600" />
+              <span className="hidden md:inline">{language === 'sw' ? 'Matangazo' : 'Announcements'}</span>
+            </button>
+          )}
+
           {/* Quick print button */}
           <button
             id="btn-header-print"
             onClick={onPrint}
             title={dict.printReport}
-            className="p-2 text-slate-700 bg-gray-100 hover:bg-gray-200 rounded-lg text-xs font-semibold transition shrink-0"
+            className="p-2 text-slate-700 bg-gray-100 hover:bg-gray-200 rounded-lg text-xs font-semibold transition shrink-0 cursor-pointer"
           >
             <Printer className="w-4 h-4" />
           </button>
@@ -167,7 +189,7 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             id="btn-header-export-csv"
             onClick={onExportCsv}
-            className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-3 py-2 rounded-lg text-xs transition flex items-center space-x-1.5 shadow-xs shrink-0"
+            className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-3 py-2 rounded-lg text-xs transition flex items-center space-x-1.5 shadow-xs shrink-0 cursor-pointer"
           >
             <Download className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">{dict.exportCsvPdf}</span>

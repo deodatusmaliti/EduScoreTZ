@@ -4,17 +4,23 @@ import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
 
+import { apiRouter } from "./server/routes";
+
 dotenv.config();
 
 async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  app.use(express.json());
+  app.use(express.json({ limit: "50mb" }));
+  app.use(express.urlencoded({ extended: true, limit: "50mb" }));
+
+  // Mount in-built backend API routes
+  app.use("/api", apiRouter);
 
   // Health check endpoint
   app.get("/api/health", (req, res) => {
-    res.json({ status: "ok", version: "1.0.0", system: "EduScore TZ" });
+    res.json({ status: "ok", version: "3.0.0", system: "EduScore TZ In-Built Backend Engine" });
   });
 
   // AI Advisor Endpoint for NECTA Curriculum & Student Pedagogical Recommendations
